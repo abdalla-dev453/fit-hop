@@ -8,8 +8,8 @@ class Studio(db.Model):
     location = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text)
 
-    # Relationships
     classes = db.relationship("FitnessClass", back_populates="studio", lazy="dynamic")
 
+    
     def __repr__ (self):
         return f"<Studio {self.name}>"

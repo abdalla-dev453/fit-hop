@@ -1,8 +1,8 @@
-"""Initial schema setup
+"""Schema using explicit back_populates
 
-Revision ID: 7bfbc10e9841
+Revision ID: 2586de857b98
 Revises: 
-Create Date: 2026-07-23 18:42:28.833075
+Create Date: 2026-07-23 19:03:29.127374
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7bfbc10e9841'
+revision = '2586de857b98'
 down_revision = None
 branch_labels = None
 depends_on = None

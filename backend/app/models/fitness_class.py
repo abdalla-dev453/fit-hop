@@ -9,16 +9,15 @@ class FitnessClass(db.Model):
     capacity = db.Column(db.Integer, nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=False)
-    
+
     studio_id = db.Column(db.Integer, db.ForeignKey("studios.id"), nullable=False)
     trainer_id = db.Column(db.Integer, db.ForeignKey("trainers.id"), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey("class_categories.id"), nullable=False)
 
-    bookings = db.relationship("Booking", back_populates="fitness_class", lazy="dynamic")
     studio = db.relationship("Studio", back_populates="classes")
     trainer = db.relationship("Trainer", back_populates="classes")
     category = db.relationship("ClassCategory", back_populates="classes")
-    user = db.relationship("User", back_populates="fitness_classes")
-
+    bookings = db.relationship("Booking", back_populates="fitness_class", lazy="dynamic")
+    
     def __repr__(self):
         return f"<FitnessClass {self.title}>"

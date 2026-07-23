@@ -7,9 +7,10 @@ class Trainer(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"), unique=True)
     bio = db.Column(db.Text)
     specialties = db.Column(db.String(255))
-    
-    classes = db.relationship("FitnessClass", back_populates="trainer", lazy="dynamic")
-    user = db.relationship("User", back_populates="trainer")
 
+    user = db.relationship("User", back_populates="trainer_profile")
+    classes = db.relationship("FitnessClass", back_populates="trainer", lazy="dynamic")
+
+    
     def __repr__(self):
         return f"<Trainer {self.id}>"
