@@ -77,6 +77,7 @@ def login():
     token = create_access_token(identity=str(user.id))
     return jsonify({
         "access_token": token,
+        "message": "User logged in successfully",
         "user": user_schema.dump(user)
     }), 200
 
@@ -84,12 +85,10 @@ def login():
 # ==========================================
 # 3. GET PROFILE DATA
 # ==========================================
-@auth_bp.route("/profile", methods=["GET"])
+@auth_bp.route("/me", methods=["GET"])
 @jwt_required()
 def get_current_user():
     user_id = get_jwt_identity()
-    
-    # Modern context-safe strategy to fetch data object identifiers cleanly
     user = db.session.get(User, int(user_id))
     if not user:
         return jsonify({"error": "User account no longer exists."}), 404

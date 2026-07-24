@@ -225,7 +225,7 @@ def seed_database():
 
         # Save all changes
         db.session.commit()
-        print("✅ Database successfully seeded!")
+        print(" Database successfully seeded!")
 
 if __name__ == "__main__":
     seed_database()
