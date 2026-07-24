@@ -26,12 +26,12 @@ class UserProfileSchema(ma.SQLAlchemyAutoSchema):
 class UserRegistrationSchema(ma.Schema):
     email = fields.Email(required=True)
     password = fields.String(required=True, validate=validate.Length(min=8, max=100))
-    role = fields.String(required=True, validate=validate.OneOf(["client", "trainer", "admin"]), load_default="client")
+    role = fields.String(validate=validate.OneOf(["client", "trainer", "admin"]), load_default="client")
     full_name = fields.String(required=True, validate=validate.Length(min=2, max=100))
     phone = fields.String(validate=validate.Length(min=10, max=20))
 
     @validates("email")
-    def validate_email_unique(self, value):
+    def validate_email_unique(self, value, **kwargs):
         # Query via the session directly to be safer with application contexts
         user_exists = db.session.query(User).filter(User.email == value).first()
         if user_exists:
@@ -58,7 +58,6 @@ class StudioSchema(ma.SQLAlchemyAutoSchema):
         load_instance = True
 
     name = fields.String(required=True, validate=validate.Length(min=2, max=100))
-    # Fixed typo from validate.Lenght to validate.Length
     location = fields.String(required=True, validate=validate.Length(min=5, max=255))
 
 class TrainerSchema(ma.SQLAlchemyAutoSchema):
@@ -95,7 +94,7 @@ class FitnessClassSchema(ma.SQLAlchemyAutoSchema):
     title = fields.String(required=True, validate=validate.Length(min=2, max=100))
     capacity = fields.Integer(required=True, validate=validate.Range(min=1))
 
-    # Converted to schema-level validation to prevent dictionary lookup crashes
+    # Ensuring start time is before end time
     @validates_schema
     def validate_times(self, data, **kwargs):
         start = data.get("start_time")
@@ -128,12 +127,14 @@ class BookingCreateSchema(ma.Schema):
     class_id = fields.Integer(required=True)
 
     @validates("class_id")
-    def validate_class_exists(self, value):
+    def validate_class_exists(self, value, **kwargs):
         fitness_class = FitnessClass.query.get(value)
         if not fitness_class:
             raise ValidationError("Class not found.")
-        if fitness_class.bookings.count() >= fitness_class.capacity:
+        current_bookings_count = db.session.query(Booking).filter(Booking.class_id == value).count()
+        if current_bookings_count >= fitness_class.capacity:
             raise ValidationError("Class is fully booked.")
+        return value
 
 
 class BookingReviewSchema(ma.Schema):

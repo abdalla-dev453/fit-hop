@@ -3,6 +3,7 @@ from app.config import Config
 from app.extensions import db, jwt, cors, migrate, ma
 from marshmallow import ValidationError
 
+# the create_app function is a factory function that returns a Flask application instance 
 def create_app(config_class=Config):
     flask_app = Flask(__name__)
     flask_app.config.from_object(config_class)
