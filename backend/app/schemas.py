@@ -151,3 +151,30 @@ class BookingResponseSchema(ma.SQLAlchemyAutoSchema):
         model = Booking
         load_instance = True
         include_fk = True
+
+
+# ----- Studio Schemas -----
+class StudioDetailStudio(ma.SQLAlchemyAutoSchema):
+    """Studio schema includeing list of upcoming classes"""
+    class Meta:
+        model = Studio
+        load_instance = True
+
+class FitnessClassDetailSchema(ma.SQLAlchemyAutoSchema):
+    stduio_name = fields.String(attribute="studio.name", dump_only=True)
+    studio_location = fields.String(attribute="studio.location", dump_only=True)
+    trainer_name = fields.String(attribute="trainer.user.profile.full_name", dump_only=True)
+
+    # computed spots calculation
+    current_bookings_count = fields.Method("get_bookings_count", dump_only=True)
+    spots_remaining = fields.Method("get_spots_remaining", dump_only=True)
+    class Meta:
+        model = FitnessClass
+        load_instance = True
+        include_fk = True
+
+    def get_booking_count(self, obj):
+        return obj.bookings.count()
+
+    def get_spots_remaining(self, obj):
+        return max(0, obj.capacity - obj.bookings.count())

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app import create_app
 from app.extensions import db
 from app.models import (
@@ -17,10 +17,13 @@ app = create_app()
 
 def seed_database():
     with app.app_context():
-        print(" Starting database seed...")
+        print("🏋️‍♂️ Starting database seed...")
 
-        # 1. Clean existing data (order matters to respect Foreign Keys)
-        print("Cleaning old data...")
+        # Force physical table creation inside an empty SQLite binary footprint
+        db.create_all()
+
+        # 1. Clean existing data (order matters to respect Foreign Key constraints)
+        print("  Cleaning old database records...")
         Booking.query.delete()
         PurchasedPass.query.delete()
         MembershipPass.query.delete()
@@ -33,9 +36,9 @@ def seed_database():
         db.session.commit()
 
         # 2. Users & UserProfiles
-        print("Seeding Users and Profiles...")
+        print(" Seeding Users and Profile states...")
         
-        # Admin
+        # Admin Account
         admin = User(email="admin@fitpass.com", role="admin")
         admin.set_password("AdminPass123!")
         db.session.add(admin)
@@ -46,11 +49,11 @@ def seed_database():
             full_name="System Admin",
             phone="555-0100",
             waiver_signed=True,
-            waiver_signed_at=datetime.utcnow(),
+            waiver_signed_at=datetime.now(timezone.utc),
         )
         db.session.add(admin_profile)
 
-        # Trainers
+        # Trainer Accounts
         trainer_user1 = User(email="maya@fitpass.com", role="trainer")
         trainer_user1.set_password("TrainerPass123!")
         trainer_user2 = User(email="alex@fitpass.com", role="trainer")
@@ -63,14 +66,14 @@ def seed_database():
             full_name="Maya Lin",
             phone="555-0101",
             waiver_signed=True,
-            waiver_signed_at=datetime.utcnow(),
+            waiver_signed_at=datetime.now(timezone.utc),
         )
         trainer_prof2 = UserProfile(
             user_id=trainer_user2.id,
             full_name="Alex Rivera",
             phone="555-0102",
             waiver_signed=True,
-            waiver_signed_at=datetime.utcnow(),
+            waiver_signed_at=datetime.now(timezone.utc),
         )
         db.session.add_all([trainer_prof1, trainer_prof2])
 
@@ -86,7 +89,7 @@ def seed_database():
         )
         db.session.add_all([trainer1, trainer2])
 
-        # Clients
+        # Client Accounts
         client1 = User(email="sarah@example.com", role="client")
         client1.set_password("ClientPass123!")
         client2 = User(email="david@example.com", role="client")
@@ -99,19 +102,19 @@ def seed_database():
             full_name="Sarah Connor",
             phone="555-0199",
             waiver_signed=True,
-            waiver_signed_at=datetime.utcnow() - timedelta(days=15),
+            waiver_signed_at=datetime.now(timezone.utc) - timedelta(days=15),
             medical_clearance_notes="Mild asthma; carries inhaler.",
         )
         client_prof2 = UserProfile(
             user_id=client2.id,
             full_name="David Miller",
             phone="555-0198",
-            waiver_signed=False, # Has not signed waiver yet
+            waiver_signed=False,  # Unsigned waiver to test route protection blocks
         )
         db.session.add_all([client_prof1, client_prof2])
 
         # 3. Studios
-        print("Seeding Studios...")
+        print("Seeding Studio facilities...")
         studio1 = Studio(
             name="Zen Flow Loft",
             location="123 Main St, Downtown",
@@ -125,7 +128,7 @@ def seed_database():
         db.session.add_all([studio1, studio2])
 
         # 4. Class Categories
-        print("Seeding Class Categories...")
+        print(" Seeding Class Categories...")
         cat_yoga = ClassCategory(name="Yoga")
         cat_hiit = ClassCategory(name="HIIT")
         cat_boxing = ClassCategory(name="Boxing")
@@ -134,8 +137,8 @@ def seed_database():
         db.session.flush()
 
         # 5. Fitness Classes
-        print("Seeding Fitness Classes...")
-        now = datetime.utcnow()
+        print("Seeding Scheduled Fitness Classes...")
+        now = datetime.now(timezone.utc)
         
         class1 = FitnessClass(
             title="Sunrise Vinyasa",
@@ -163,7 +166,7 @@ def seed_database():
             title="Core & Reformer Pilates",
             description="Targeted deep-core work to improve posture, balance, and stability.",
             capacity=8,
-            start_time=now - timedelta(days=2, hours=3), # Past class for completed review demo
+            start_time=now - timedelta(days=2, hours=3),  # Historic event for past review data metrics
             end_time=now - timedelta(days=2, hours=2),
             studio_id=studio1.id,
             trainer_id=trainer1.id,
@@ -172,7 +175,7 @@ def seed_database():
         db.session.add_all([class1, class2, class3])
 
         # 6. Membership Passes
-        print("Seeding Membership Passes...")
+        print("  Seeding Membership Pass Tier templates...")
         pass_dropin = MembershipPass(
             name="Single Class Drop-In",
             credits=1,
@@ -195,7 +198,7 @@ def seed_database():
         db.session.flush()
 
         # 7. Purchased Passes
-        print("Seeding Purchased Passes...")
+        print(" Seeding Client Purchased Pass Ledger...")
         user_pass1 = PurchasedPass(
             user_id=client1.id,
             pass_id=pass_10pack.id,
@@ -205,8 +208,8 @@ def seed_database():
         )
         db.session.add(user_pass1)
 
-        # 8. Bookings (Includes upcoming booking and a completed past booking with review)
-        print("Seeding Bookings...")
+        # 8. Bookings
+        print(" Seeding active and historic reservation Bookings...")
         booking_upcoming = Booking(
             user_id=client1.id,
             class_id=class1.id,
@@ -223,9 +226,9 @@ def seed_database():
         )
         db.session.add_all([booking_upcoming, booking_past])
 
-        # Save all changes
+        # Save all generated models cleanly
         db.session.commit()
-        print(" Database successfully seeded!")
+        print(" Database successfully seeded without warnings!")
 
 if __name__ == "__main__":
     seed_database()
