@@ -1,9 +1,6 @@
-from importlib.metadata import requires
 import re
-from typing import Required
-from xml.etree.ElementInclude import include
-from marshmallow import fields, validate, validates, ValidationError
-from app.extensions import ma
+from marshmallow import fields, validate, validates, validates_schema, ValidationError
+from app.extensions import ma, db  # Import db from extensions cleanly
 from app.models import (
     User,
     UserProfile,
@@ -16,7 +13,7 @@ from app.models import (
     Booking,
 )
 
-#----- User $ Profile Schemas -----
+# ----- User & Profile Schemas -----
 class UserProfileSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = UserProfile
@@ -35,7 +32,6 @@ class UserRegistrationSchema(ma.Schema):
 
     @validates("email")
     def validate_email_unique(self, value):
-        from extensions import db  # Import locally to prevent circular imports
         # Query via the session directly to be safer with application contexts
         user_exists = db.session.query(User).filter(User.email == value).first()
         if user_exists:
@@ -55,14 +51,15 @@ class UserResponseSchema(ma.SQLAlchemyAutoSchema):
         exclude = ("password_hash",)
 
 
-# Studios & Trainer Schemas
+# ----- Studios & Trainer Schemas -----
 class StudioSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = Studio
         load_instance = True
 
     name = fields.String(required=True, validate=validate.Length(min=2, max=100))
-    location = fields.String(required=True, validate=validate.Lenght(min=5, max=255))
+    # Fixed typo from validate.Lenght to validate.Length
+    location = fields.String(required=True, validate=validate.Length(min=5, max=255))
 
 class TrainerSchema(ma.SQLAlchemyAutoSchema):
     user_name = fields.Method("get_user_name", dump_only=True)
@@ -73,14 +70,12 @@ class TrainerSchema(ma.SQLAlchemyAutoSchema):
         include_fk = True
 
     def get_user_name(self, obj):
-        # Safely drill down the relationships with fallback strings
         if obj.user and obj.user.profile:
             return obj.user.profile.full_name
         return "Unknown Trainer"
 
 
-
-# Fitness Class & Category Schemas
+# ----- Fitness Class & Category Schemas -----
 class ClassCategorySchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = ClassCategory
@@ -100,16 +95,16 @@ class FitnessClassSchema(ma.SQLAlchemyAutoSchema):
     title = fields.String(required=True, validate=validate.Length(min=2, max=100))
     capacity = fields.Integer(required=True, validate=validate.Range(min=1))
 
-    @validate("end_time")
-    def validate_times(self, value, **kwargs):
-        data = self.context.get("data")
-        if data and "start_time" in data and value <= data["start_time"]:
-            raise ValidationError("End time must be after start time.")
-        return value
+    # Converted to schema-level validation to prevent dictionary lookup crashes
+    @validates_schema
+    def validate_times(self, data, **kwargs):
+        start = data.get("start_time")
+        end = data.get("end_time")
+        if start and end and end <= start:
+            raise ValidationError({"end_time": "End time must be after start time."})
 
 
-
-# Pass Schemas
+# ----- Pass Schemas -----
 class MembershipPassSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = MembershipPass
@@ -128,19 +123,18 @@ class PurchasedPassSchema(ma.SQLAlchemyAutoSchema):
         include_fk = True
 
 
-
-# Booking Schemas
-class BookingSchema(ma.SQLAlchemyAutoSchema):
+# ----- Booking Schemas -----
+class BookingCreateSchema(ma.Schema):
     class_id = fields.Integer(required=True)
 
     @validates("class_id")
     def validate_class_exists(self, value):
         fitness_class = FitnessClass.query.get(value)
         if not fitness_class:
-            raise ValidationError("Class does not exist.")
+            raise ValidationError("Class not found.")
         if fitness_class.bookings.count() >= fitness_class.capacity:
             raise ValidationError("Class is fully booked.")
-        return value
+
 
 class BookingReviewSchema(ma.Schema):
     rating = fields.Integer(required=True, validate=validate.Range(min=1, max=5))
@@ -150,7 +144,7 @@ class BookingReviewSchema(ma.Schema):
 class BookingResponseSchema(ma.SQLAlchemyAutoSchema):
     class_title = fields.String(attribute="fitness_class.title", dump_only=True)
     start_time = fields.DateTime(attribute="fitness_class.start_time", dump_only=True)
-    studio_name = fields.String(sttribute="fitness_class.studio.name", dump_only=True)
+    studio_name = fields.String(attribute="fitness_class.studio.name", dump_only=True)
 
     class Meta:
         model = Booking
